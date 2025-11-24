@@ -123,19 +123,26 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
+# ✅ FIXED: Remove @login_required decorator - allow mobile app without session
 @app.route('/get_recommendations', methods=['POST'])
-@login_required
 def get_recommendations():
     try:
         data = request.get_json()
         mood = data.get('mood', '')
         module_type = data.get('module_type', '')
         
+        print(f"🎵 Received request - Mood: {mood}, Module: {module_type}")
+        
         if not mood:
             return jsonify({'success': False, 'error': 'No mood detected'})
         
         # Get song recommendations
         songs = get_songs_by_mood(mood)
+        
+        print(f"📀 Found {len(songs)} songs for mood: {mood}")
+        
+        if not songs:
+            print(f"⚠️ No songs found in database for mood: {mood}")
         
         return jsonify({
             'success': True,
@@ -145,7 +152,9 @@ def get_recommendations():
         })
         
     except Exception as e:
-        print(f"Recommendations error: {e}")
+        print(f"❌ Recommendations error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/reset_password', methods=['POST'])
