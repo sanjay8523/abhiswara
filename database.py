@@ -45,7 +45,7 @@ def init_database():
         count = cursor.fetchone()[0]
         
         if count == 0:
-            # Insert sample songs
+            # Insert sample songs for ALL moods
             sample_songs = [
                 # Happy songs
                 ("Happy", "Pharrell Williams", "Happy", "https://i.ytimg.com/vi/ZbZSe6N_BXs/maxresdefault.jpg", "https://www.youtube.com/watch?v=ZbZSe6N_BXs"),
@@ -91,13 +91,15 @@ def init_database():
             print(f"Database initialized with {len(sample_songs)} songs")
 
 def get_songs_by_mood(mood):
-    """Get all songs for a specific mood"""
+    """Get all songs for a specific mood (Case Insensitive)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
+        # ✅ THIS IS THE UNIVERSAL FIX
+        # 'COLLATE NOCASE' means: match 'Sad' even if user asks for 'sad' or 'SAD'
         cursor.execute('''
             SELECT song_id, title, artist, mood, cover_url, youtube_link 
             FROM songs 
-            WHERE mood = ?
+            WHERE mood COLLATE NOCASE = ?
             ORDER BY RANDOM()
             LIMIT 10
         ''', (mood,))
