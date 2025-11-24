@@ -1,425 +1,385 @@
-// Authentication JavaScript functionality
-document.addEventListener('DOMContentLoaded', function() {
-    initializeAuthForms();
-    initializePasswordToggle();
-    initializeFormValidation();
+// Enhanced Authentication JavaScript
+document.addEventListener("DOMContentLoaded", function () {
+  initializeAuthForms();
+  initializePasswordToggle();
+  initializeFormValidation();
 });
 
 // Initialize authentication forms
 function initializeAuthForms() {
-    // Bind signup form
-    const signupForm = document.getElementById('signupForm');
-    if (signupForm) {
-        signupForm.addEventListener('submit', handleSignupSubmit);
-    }
-    
-    // Bind signin form
-    const signinForm = document.getElementById('signinForm');
-    if (signinForm) {
-        signinForm.addEventListener('submit', handleSigninSubmit);
-    }
-    
-    // Add input focus animations
-    const inputs = document.querySelectorAll('.form-group input');
-    inputs.forEach(input => {
-        input.addEventListener('focus', function() {
-            this.parentElement.classList.add('focused');
-        });
-        
-        input.addEventListener('blur', function() {
-            if (!this.value) {
-                this.parentElement.classList.remove('focused');
-            }
-        });
+  const signupForm = document.getElementById("signupForm");
+  if (signupForm) {
+    signupForm.addEventListener("submit", handleSignupSubmit);
+  }
+
+  const signinForm = document.getElementById("signinForm");
+  if (signinForm) {
+    signinForm.addEventListener("submit", handleSigninSubmit);
+  }
+
+  // Add input animations
+  const inputs = document.querySelectorAll(".input-group input");
+  inputs.forEach((input) => {
+    input.addEventListener("focus", function () {
+      this.parentElement.style.transform = "scale(1.02)";
     });
+
+    input.addEventListener("blur", function () {
+      this.parentElement.style.transform = "scale(1)";
+    });
+  });
 }
 
-// Handle signup submit -> POST /register (JSON)
+// Handle signup
 async function handleSignupSubmit(e) {
-    e.preventDefault();
-    
-    const form = e.target;
-    const username = form.querySelector('#username')?.value.trim();
-    const email = form.querySelector('#email')?.value.trim();
-    const password = form.querySelector('#password')?.value;
-    const confirmPassword = form.querySelector('#confirmPassword')?.value;
-    const termsAccepted = form.querySelector('#terms')?.checked;
-    const submitBtn = form.querySelector('#submitBtn');
-    const spinner = form.querySelector('#loadingSpinner');
-    const btnText = form.querySelector('.btn-text');
+  e.preventDefault();
 
-    // Client-side validation
-    if (!username || !email || !password || !confirmPassword) {
-        showMessage('Please fill in all required fields', 'error');
-        return;
-    }
-    if (password.length < 6) {
-        showMessage('Password must be at least 6 characters', 'error');
-        return;
-    }
-    if (password !== confirmPassword) {
-        showMessage('Passwords do not match', 'error');
-        return;
-    }
-    if (!termsAccepted) {
-        showMessage('Please accept the Terms and Privacy Policy', 'error');
-        return;
-    }
+  const form = e.target;
+  const username = form.querySelector("#username")?.value.trim();
+  const email = form.querySelector("#email")?.value.trim();
+  const password = form.querySelector("#password")?.value;
+  const confirmPassword = form.querySelector("#confirmPassword")?.value;
+  const termsAccepted = form.querySelector("#terms")?.checked;
+  const submitBtn = form.querySelector("#submitBtn");
+  const spinner = form.querySelector("#loadingSpinner");
+  const btnText = form.querySelector(".btn-text");
 
-    // Loading state
-    if (spinner) spinner.classList.remove('hidden');
-    if (btnText) btnText.textContent = 'Creating...';
-    if (submitBtn) submitBtn.disabled = true;
+  // Validation
+  if (!username || !email || !password || !confirmPassword) {
+    showToast("Please fill in all required fields", "error");
+    return;
+  }
 
-    try {
-        const res = await fetch('/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, email, password })
-        });
-        const data = await res.json().catch(() => ({ success: false, message: 'Invalid server response' }));
+  if (username.length < 2) {
+    showToast("Username must be at least 2 characters", "error");
+    return;
+  }
 
-        if (data.success) {
-            showMessage('Registration successful! Redirecting to sign in...', 'success');
-            setTimeout(() => { window.location.href = '/signin'; }, 800);
-        } else {
-            showMessage(data.message || 'Registration failed. Please try again.', 'error');
-        }
-    } catch (err) {
-        console.error('Signup error:', err);
-        showMessage('Network error. Please try again.', 'error');
-    } finally {
-        if (spinner) spinner.classList.add('hidden');
-        if (btnText) btnText.textContent = 'Create Account';
-        if (submitBtn) submitBtn.disabled = false;
-    }
-}
+  if (password.length < 6) {
+    showToast("Password must be at least 6 characters", "error");
+    return;
+  }
 
-// Handle signin submit -> POST /login (JSON)
-async function handleSigninSubmit(e) {
-    e.preventDefault();
+  if (password !== confirmPassword) {
+    showToast("Passwords do not match", "error");
+    return;
+  }
 
-    const form = e.target;
-    const email = form.querySelector('#email')?.value.trim();
-    const password = form.querySelector('#password')?.value;
-    const submitBtn = form.querySelector('#submitBtn');
-    const spinner = form.querySelector('#loadingSpinner');
-    const btnText = form.querySelector('.btn-text');
+  if (!termsAccepted) {
+    showToast("Please accept the Terms and Privacy Policy", "error");
+    return;
+  }
 
-    if (!email || !password) {
-        showMessage('Email and password are required', 'error');
-        return;
-    }
+  // Loading state
+  if (spinner) spinner.classList.remove("hidden");
+  if (btnText) btnText.textContent = "Creating Account...";
+  if (submitBtn) submitBtn.disabled = true;
 
-    if (spinner) spinner.classList.remove('hidden');
-    if (btnText) btnText.textContent = 'Signing in...';
-    if (submitBtn) submitBtn.disabled = true;
-
-    try {
-        const res = await fetch('/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
-        const data = await res.json().catch(() => ({ success: false, message: 'Invalid server response' }));
-
-        if (data.success) {
-            window.location.href = '/dashboard';
-        } else {
-            showMessage(data.message || 'Invalid email or password', 'error');
-        }
-    } catch (err) {
-        console.error('Signin error:', err);
-        showMessage('Network error. Please try again.', 'error');
-    } finally {
-        if (spinner) spinner.classList.add('hidden');
-        if (btnText) btnText.textContent = 'Sign In';
-        if (submitBtn) submitBtn.disabled = false;
-    }
-}
-
-// Initialize password toggle functionality
-function initializePasswordToggle() {
-    const passwordToggles = document.querySelectorAll('.password-toggle');
-    
-    passwordToggles.forEach(toggle => {
-        toggle.addEventListener('click', function() {
-            const input = this.previousElementSibling;
-            const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
-            input.setAttribute('type', type);
-            // If there is an icon inside the button, toggle classes if needed
-            const icon = this.querySelector('i');
-            if (icon) {
-                icon.classList.toggle('fa-eye');
-                icon.classList.toggle('fa-eye-slash');
-            }
-        });
+  try {
+    const res = await fetch("/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, email, password }),
     });
+
+    const data = await res.json();
+
+    if (data.success) {
+      showToast("Account created successfully!", "success");
+      setTimeout(() => {
+        window.location.href = "/signin";
+      }, 1500);
+    } else {
+      showToast(data.message || "Registration failed", "error");
+    }
+  } catch (err) {
+    console.error("Signup error:", err);
+    showToast("Network error. Please try again.", "error");
+  } finally {
+    if (spinner) spinner.classList.add("hidden");
+    if (btnText) btnText.textContent = "Create Account";
+    if (submitBtn) submitBtn.disabled = false;
+  }
+}
+
+// Handle signin
+async function handleSigninSubmit(e) {
+  e.preventDefault();
+
+  const form = e.target;
+  const email = form.querySelector("#email")?.value.trim();
+  const password = form.querySelector("#password")?.value;
+  const submitBtn = form.querySelector("#submitBtn");
+  const spinner = form.querySelector("#loadingSpinner");
+  const btnText = form.querySelector(".btn-text");
+
+  if (!email || !password) {
+    showToast("Email and password are required", "error");
+    return;
+  }
+
+  if (spinner) spinner.classList.remove("hidden");
+  if (btnText) btnText.textContent = "Signing In...";
+  if (submitBtn) submitBtn.disabled = true;
+
+  try {
+    const res = await fetch("/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      showToast("Login successful!", "success");
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 800);
+    } else {
+      showToast(data.message || "Invalid email or password", "error");
+    }
+  } catch (err) {
+    console.error("Signin error:", err);
+    showToast("Network error. Please try again.", "error");
+  } finally {
+    if (spinner) spinner.classList.add("hidden");
+    if (btnText) btnText.textContent = "Sign In";
+    if (submitBtn) submitBtn.disabled = false;
+  }
+}
+
+// Password toggle
+function initializePasswordToggle() {
+  const passwordToggles = document.querySelectorAll(".password-toggle");
+
+  passwordToggles.forEach((toggle) => {
+    toggle.addEventListener("click", function () {
+      const input = this.previousElementSibling;
+      const icon = this.querySelector("i");
+
+      if (input.type === "password") {
+        input.type = "text";
+        if (icon) {
+          icon.classList.remove("fa-eye");
+          icon.classList.add("fa-eye-slash");
+        }
+      } else {
+        input.type = "password";
+        if (icon) {
+          icon.classList.remove("fa-eye-slash");
+          icon.classList.add("fa-eye");
+        }
+      }
+    });
+  });
 }
 
 // Form validation
 function initializeFormValidation() {
-    const forms = document.querySelectorAll('form.auth-form, .auth-form');
-    
-    forms.forEach(form => {
-        const inputs = form.querySelectorAll('input[required]');
-        
-        inputs.forEach(input => {
-            input.addEventListener('blur', validateInput);
-            input.addEventListener('input', clearValidationError);
-        });
+  const forms = document.querySelectorAll("form");
+
+  forms.forEach((form) => {
+    const inputs = form.querySelectorAll("input[required]");
+
+    inputs.forEach((input) => {
+      input.addEventListener("blur", validateInput);
+      input.addEventListener("input", clearValidationError);
     });
+  });
 }
 
 function validateInput(e) {
-    const input = e.target;
-    const value = input.value.trim();
-    const type = input.type;
-    const name = input.name;
-    
-    clearValidationError(e);
-    
-    // Required field validation
-    if (!value) {
-        showInputError(input, `${getFieldLabel(name)} is required`);
-        return false;
+  const input = e.target;
+  const value = input.value.trim();
+  const type = input.type;
+  const name = input.name;
+
+  clearValidationError(e);
+
+  if (!value) {
+    showInputError(input, `${getFieldLabel(name)} is required`);
+    return false;
+  }
+
+  if (type === "email") {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value)) {
+      showInputError(input, "Please enter a valid email address");
+      return false;
     }
-    
-    // Email validation
-    if (type === 'email') {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(value)) {
-            showInputError(input, 'Please enter a valid email address');
-            return false;
-        }
+  }
+
+  if (
+    name === "password" &&
+    input.form &&
+    input.form.querySelector('input[name="confirmPassword"]')
+  ) {
+    if (value.length < 6) {
+      showInputError(input, "Password must be at least 6 characters");
+      return false;
     }
-    
-    // Password validation (only on signup where confirmPassword exists)
-    if (name === 'password' && input.form && input.form.querySelector('input[name="confirmPassword"]')) {
-        if (value.length < 6) {
-            showInputError(input, 'Password must be at least 6 characters long');
-            return false;
-        }
+  }
+
+  if (name === "confirmPassword") {
+    const password = input.form.querySelector('input[name="password"]').value;
+    if (value !== password) {
+      showInputError(input, "Passwords do not match");
+      return false;
     }
-    
-    // Confirm password validation
-    if (name === 'confirmPassword') {
-        const password = input.form.querySelector('input[name="password"]').value;
-        if (value !== password) {
-            showInputError(input, 'Passwords do not match');
-            return false;
-        }
+  }
+
+  if (name === "username") {
+    if (value.length < 2) {
+      showInputError(input, "Username must be at least 2 characters");
+      return false;
     }
-    
-    // Username validation
-    if (name === 'username') {
-        const usernameRegex = /^[a-zA-Z0-9_\s]{3,30}$/;
-        if (!usernameRegex.test(value)) {
-            showInputError(input, 'Username must be 3-30 characters');
-            return false;
-        }
-    }
-    
-    return true;
+  }
+
+  return true;
 }
 
 function showInputError(input, message) {
-    const formGroup = input.parentElement;
-    
-    // Remove existing error
-    const existingError = formGroup.querySelector('.input-error');
-    if (existingError) {
-        existingError.remove();
-    }
-    
-    // Add error class
-    input.classList.add('error');
-    
-    // Create error element
-    const errorElement = document.createElement('div');
-    errorElement.className = 'input-error';
+  const formGroup = input.closest(".form-group");
+  const errorElement = formGroup.querySelector(".input-error");
+
+  if (errorElement) {
     errorElement.textContent = message;
-    errorElement.style.cssText = `
-        color: #dc3545;
-        font-size: 0.85em;
-        margin-top: 5px;
-        padding: 5px 10px;
-        background: #fee;
-        border-radius: 5px;
-        border: 1px solid #fcc;
-    `;
-    
-    formGroup.appendChild(errorElement);
+    errorElement.style.display = "block";
+  }
+
+  input.style.borderColor = "#dc3545";
 }
 
 function clearValidationError(e) {
-    const input = e.target;
-    const formGroup = input.parentElement;
-    const errorElement = formGroup.querySelector('.input-error');
-    
-    if (errorElement) {
-        errorElement.remove();
-    }
-    
-    input.classList.remove('error');
+  const input = e.target;
+  const formGroup = input.closest(".form-group");
+  const errorElement = formGroup.querySelector(".input-error");
+
+  if (errorElement) {
+    errorElement.textContent = "";
+    errorElement.style.display = "none";
+  }
+
+  input.style.borderColor = "#e1e5e9";
 }
 
 function getFieldLabel(name) {
-    const labels = {
-        'username': 'Username',
-        'email': 'Email',
-        'password': 'Password',
-        'confirmPassword': 'Confirm Password',
-        'full_name': 'Full Name'
-    };
-    return labels[name] || name;
+  const labels = {
+    username: "Username",
+    email: "Email",
+    password: "Password",
+    confirmPassword: "Confirm Password",
+  };
+  return labels[name] || name;
 }
 
-// Show success/error messages
-function showMessage(message, type = 'error') {
-    // Remove existing messages
-    const existingMessages = document.querySelectorAll('.message');
-    existingMessages.forEach(msg => msg.remove());
-    
-    // Create message element
-    const messageElement = document.createElement('div');
-    messageElement.className = `message ${type}-message`;
-    messageElement.textContent = message;
-    
-    // Insert message (prefer current visible auth form)
-    const form = document.querySelector('form#signupForm, form#signinForm, .auth-form');
-    if (form) {
-        form.insertBefore(messageElement, form.firstChild);
+// Toast notifications
+function showToast(message, type = "error") {
+  // Remove existing toasts
+  const existingToasts = document.querySelectorAll(".toast");
+  existingToasts.forEach((toast) => toast.remove());
+
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+
+  const icon = type === "error" ? "fa-exclamation-circle" : "fa-check-circle";
+
+  toast.innerHTML = `
+        <i class="fas ${icon}"></i>
+        <span>${message}</span>
+        <button onclick="this.parentElement.remove()" class="toast-close">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.remove();
+  }, 5000);
+}
+
+// Forgot password
+const forgotForm = document.querySelector("#forgotPasswordForm");
+if (forgotForm) {
+  forgotForm.addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const email = this.querySelector('input[name="email"]').value.trim();
+    const submitBtn = this.querySelector("#submitBtn");
+    const btnText = submitBtn.querySelector(".btn-text");
+    const spinner = submitBtn.querySelector("#loadingSpinner");
+
+    if (!email) {
+      showToast("Email is required", "error");
+      return;
     }
-    
-    // Auto-hide after 5 seconds
-    setTimeout(() => {
-        if (messageElement.parentNode) {
-            messageElement.remove();
-        }
-    }, 5000);
-}
 
-// Password strength indicator (for signup page)
-function initializePasswordStrength() {
-    const passwordInput = document.querySelector('form#signupForm input[name="password"]');
-    
-    if (passwordInput) {
-        passwordInput.addEventListener('input', function() {
-            const strength = calculatePasswordStrength(this.value);
-            showPasswordStrength(this, strength);
-        });
+    if (spinner) spinner.classList.remove("hidden");
+    if (btnText) btnText.textContent = "Sending...";
+    submitBtn.disabled = true;
+
+    try {
+      const response = await fetch("/reset_password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        showToast(data.message || "Reset instructions sent!", "success");
+        this.reset();
+        setTimeout(() => {
+          window.location.href = "/signin";
+        }, 2000);
+      } else {
+        showToast(data.message || "Failed to send reset email", "error");
+      }
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      showToast("Network error. Please try again.", "error");
+    } finally {
+      if (spinner) spinner.classList.add("hidden");
+      if (btnText) btnText.textContent = "Send Reset Instructions";
+      submitBtn.disabled = false;
     }
+  });
 }
 
-function calculatePasswordStrength(password) {
-    let score = 0;
-    
-    // Length
-    if (password.length >= 6) score += 1;
-    if (password.length >= 8) score += 1;
-    
-    // Character types
-    if (/[a-z]/.test(password)) score += 1;
-    if (/[A-Z]/.test(password)) score += 1;
-    if (/[0-9]/.test(password)) score += 1;
-    if (/[^A-Za-z0-9]/.test(password)) score += 1;
-    
-    return Math.min(score, 4);
-}
+// Helper functions for password toggle
+function togglePassword() {
+  const passwordInput = document.getElementById("password");
+  const icon = document.getElementById("passwordIcon");
 
-function showPasswordStrength(input, strength) {
-    const formGroup = input.parentElement;
-    let strengthIndicator = formGroup.querySelector('.password-strength');
-    
-    if (!strengthIndicator) {
-        strengthIndicator = document.createElement('div');
-        strengthIndicator.className = 'password-strength';
-        strengthIndicator.style.cssText = `
-            display: flex;
-            gap: 3px;
-            margin-top: 5px;
-        `;
-        formGroup.appendChild(strengthIndicator);
+  if (passwordInput && icon) {
+    if (passwordInput.type === "password") {
+      passwordInput.type = "text";
+      icon.classList.remove("fa-eye");
+      icon.classList.add("fa-eye-slash");
+    } else {
+      passwordInput.type = "password";
+      icon.classList.remove("fa-eye-slash");
+      icon.classList.add("fa-eye");
     }
-    
-    const colors = ['#dc3545', '#fd7e14', '#ffc107', '#28a745'];
-    const labels = ['Weak', 'Fair', 'Good', 'Strong'];
-    
-    strengthIndicator.innerHTML = '';
-    
-    for (let i = 0; i < 4; i++) {
-        const bar = document.createElement('div');
-        bar.style.cssText = `
-            height: 4px;
-            flex: 1;
-            border-radius: 2px;
-            background-color: ${i < strength ? colors[strength - 1] : '#e9ecef'};
-            transition: all 0.3s ease;
-        `;
-        strengthIndicator.appendChild(bar);
-    }
-    
-    let existingLabel = formGroup.querySelector('.password-strength-label');
-    if (!existingLabel) {
-        existingLabel = document.createElement('div');
-        existingLabel.className = 'password-strength-label';
-        formGroup.appendChild(existingLabel);
-    }
-    existingLabel.textContent = strength > 0 ? labels[strength - 1] : '';
-    existingLabel.style.color = strength > 0 ? colors[strength - 1] : '#666';
+  }
 }
 
-// Initialize password strength on signup page
-if (window.location.pathname.includes('signup')) {
-    document.addEventListener('DOMContentLoaded', initializePasswordStrength);
-}
+function toggleConfirmPassword() {
+  const confirmInput = document.getElementById("confirmPassword");
+  const icon = document.getElementById("confirmPasswordIcon");
 
-// Forgot password functionality
-function initializeForgotPassword() {
-    const forgotForm = document.querySelector('#forgot-password-form');
-    
-    if (forgotForm) {
-        forgotForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const email = this.querySelector('input[name="email"]').value;
-            const submitBtn = this.querySelector('#submitBtn');
-            
-            if (submitBtn) {
-                submitBtn.textContent = 'Sending...';
-                submitBtn.disabled = true;
-            }
-            
-            try {
-                const response = await fetch('/reset_password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email })
-                });
-                
-                const data = await response.json().catch(() => ({ success: false }));
-                
-                if (data.success) {
-                    showMessage('Password reset instructions sent to your email!', 'success');
-                    this.reset();
-                } else {
-                    showMessage(data.message || 'Failed to send reset email.', 'error');
-                }
-            } catch (error) {
-                console.error('Forgot password error:', error);
-                showMessage('Network error. Please try again.', 'error');
-            } finally {
-                if (submitBtn) {
-                    submitBtn.textContent = 'Send Reset Link';
-                    submitBtn.disabled = false;
-                }
-            }
-        });
+  if (confirmInput && icon) {
+    if (confirmInput.type === "password") {
+      confirmInput.type = "text";
+      icon.classList.remove("fa-eye");
+      icon.classList.add("fa-eye-slash");
+    } else {
+      confirmInput.type = "password";
+      icon.classList.remove("fa-eye-slash");
+      icon.classList.add("fa-eye");
     }
-}
-
-// Initialize forgot password on the appropriate page
-if (window.location.pathname.includes('forgot')) {
-    document.addEventListener('DOMContentLoaded', initializeForgotPassword);
+  }
 }

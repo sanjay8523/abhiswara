@@ -4,9 +4,10 @@ import os
 from functools import wraps
 import hashlib
 import secrets
+import time
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(16)  # Generate a secure secret key
+app.secret_key = secrets.token_hex(16)
 
 # Initialize databases on startup
 init_database()
@@ -19,12 +20,6 @@ def login_required(f):
             return redirect(url_for('signin'))
         return f(*args, **kwargs)
     return decorated_function
-
-def aggregate_mood_single(module_mood):
-    """
-    Since user chooses only one module, return that module's mood
-    """
-    return module_mood
 
 @app.route('/')
 def index():
@@ -70,13 +65,17 @@ def register():
     try:
         data = request.get_json()
         username = data.get('username', '').strip()
-        email = data.get('email', '').strip()
+        email = data.get('email', '').strip().lower()
         password = data.get('password', '')
         
-        if not username or not email or not password:
-            return jsonify({'success': False, 'message': 'All fields are required'})
+        # Validation
+        if not username or len(username) < 2:
+            return jsonify({'success': False, 'message': 'Username must be at least 2 characters'})
         
-        if len(password) < 6:
+        if not email or '@' not in email:
+            return jsonify({'success': False, 'message': 'Please enter a valid email address'})
+        
+        if not password or len(password) < 6:
             return jsonify({'success': False, 'message': 'Password must be at least 6 characters'})
         
         # Check if user already exists
@@ -86,25 +85,28 @@ def register():
         # Create user
         user_id = create_user(username, email, password)
         if user_id:
-            return jsonify({'success': True, 'message': 'Registration successful! Please sign in.'})
+            return jsonify({'success': True, 'message': 'Registration successful!'})
         else:
             return jsonify({'success': False, 'message': 'Registration failed. Please try again.'})
             
     except Exception as e:
+        print(f"Registration error: {e}")
         return jsonify({'success': False, 'message': 'An error occurred. Please try again.'})
 
 @app.route('/login', methods=['POST'])
 def login():
     try:
         data = request.get_json()
-        email = data.get('email', '').strip()
+        email = data.get('email', '').strip().lower()
         password = data.get('password', '')
         
         if not email or not password:
             return jsonify({'success': False, 'message': 'Email and password are required'})
         
+        # Verify user
         user = verify_user(email, password)
         if user:
+            session.permanent = True
             session['user_id'] = user['user_id']
             session['username'] = user['username']
             session['email'] = user['email']
@@ -113,12 +115,12 @@ def login():
             return jsonify({'success': False, 'message': 'Invalid email or password'})
             
     except Exception as e:
+        print(f"Login error: {e}")
         return jsonify({'success': False, 'message': 'An error occurred. Please try again.'})
 
 @app.route('/logout')
 def logout():
     session.clear()
-    flash('You have been logged out successfully.', 'info')
     return redirect(url_for('index'))
 
 @app.route('/get_recommendations', methods=['POST'])
@@ -126,52 +128,44 @@ def logout():
 def get_recommendations():
     try:
         data = request.get_json()
-        
-        # Get the single module mood (user chose only one module)
-        module_mood = data.get('mood', '')
+        mood = data.get('mood', '')
         module_type = data.get('module_type', '')
         
-        if not module_mood:
+        if not mood:
             return jsonify({'success': False, 'error': 'No mood detected'})
         
-        # Since user chose only one module, use that mood directly
-        dominant_mood = module_mood
-        
         # Get song recommendations
-        songs = get_songs_by_mood(dominant_mood)
+        songs = get_songs_by_mood(mood)
         
         return jsonify({
             'success': True,
-            'dominant_mood': dominant_mood,
+            'dominant_mood': mood,
             'module_type': module_type,
             'songs': songs
         })
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        print(f"Recommendations error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/reset_password', methods=['POST'])
 def reset_password():
-    # For demo purposes, just return success
-    # In production, you'd implement email sending logic
     try:
         data = request.get_json()
-        email = data.get('email', '').strip()
+        email = data.get('email', '').strip().lower()
         
         if not email:
             return jsonify({'success': False, 'message': 'Email is required'})
         
-        # Check if email exists
         user = get_user_by_email(email)
         if user:
+            # In production, send actual reset email
             return jsonify({'success': True, 'message': 'Password reset instructions sent to your email!'})
         else:
             return jsonify({'success': False, 'message': 'Email not found in our system'})
             
     except Exception as e:
+        print(f"Reset password error: {e}")
         return jsonify({'success': False, 'message': 'An error occurred. Please try again.'})
 
 if __name__ == '__main__':
